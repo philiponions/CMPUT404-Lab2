@@ -1,16 +1,22 @@
 import socket
 
-HOST = "127.0.0.1"
+BYTES_TO_READ = 4096
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def get(host, port):
+    request = b"GET / HTTP/1.1\nHost: www.google.com\n\n"
 
-s.connect(("127.0.0.1", 8001))
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((host, port))
+        s.send(request)
+        s.shutdown(socket.SHUT_WR)
+        chunk = s.recv(BYTES_TO_READ)
+        result = b'' + chunk
 
-while True:
-    user = input("")
-    s.send(b"GET / HTTP/1.1\r\nHost:127.0.0.1:8001\r\n\r\n")
+        while(len(chunk) > 0):
+            chunk = s.recv(BYTES_TO_READ)
+            result += chunk
+        s.close()
+        
+        return result
 
-    response = s.recv(4096)
-
-    print(response)
-
+print(get("127.0.0.1", 8080))

@@ -1,32 +1,36 @@
 import socket
-import os
+from threading import Thread
 
+BYTES_TO_READ = 4096
 HOST = "127.0.0.1"
-PORT = 8001
+PORT = 8080
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def handle_connection(conn, addr):
+    with conn:
+        print(f"Connected by {addr}")
+        while True:
+            data = conn.recv(BYTES_TO_READ)
+            if not data:
+                break
+            print(data)
+            conn.sendall(data)
 
-s.bind((HOST, PORT))
-s.listen()
-
-def handle_client(conn):    
-    while True:        
-        data = conn.recv(1024)        
-        if not data:                           
-            break
-             
-        conn.sendall(data)        
-
-
-def main():    
-    while True:
+def start_server():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.listen()
         conn, addr = s.accept()
-        # Create a new copy of itself for every client that arrives
-        # so each client gets its own private copy of the server to interact with
-        pid = os.fork()
-        if pid == 0:
-            handle_client(conn)       
-            print("Finished")       
-            break # Close
-            
-main()
+        handle_connection(conn, addr)
+
+def start_threaded_server():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST,PORT))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.listen(2)
+        while True:
+            conn, addr = s.accept()
+            thread = Thread(target=handle_connection, args=(conn, addr))
+            thread.run()
+
+start_threaded_server()
